@@ -23,23 +23,30 @@ class TurnAway(Node):
         )
 
         self.get_logger().info('Turn away node started')
+        self.declare_parameter('forward_speed', 0.2)
+        self.declare_parameter('turn_speed', 0.5)
 
     def on_obstacle(self, msg):
         twist = Twist()
-
+    
+        # Read parameters every time a message arrives
+        forward_speed = self.get_parameter('forward_speed').value
+        turn_speed = self.get_parameter('turn_speed').value
+    
         if not msg.too_close:
-            twist.linear.x = 0.2
+            twist.linear.x = forward_speed
             twist.angular.z = 0.0
-
+    
         elif msg.angle > 0:
             twist.linear.x = 0.0
-            twist.angular.z = -0.5
-
+            twist.angular.z = -turn_speed
+    
         else:
             twist.linear.x = 0.0
-            twist.angular.z = 0.5
-
+            twist.angular.z = turn_speed
+    
         self.cmd_vel_pub.publish(twist)
+    
 
 
 def main(args=None):
