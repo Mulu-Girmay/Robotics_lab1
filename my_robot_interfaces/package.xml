@@ -6,6 +6,8 @@
   <description>Robot interface definitions</description>
   <maintainer email="mgirmay038@gmail.com">mulu</maintainer>
   <license>MIT</license>
+  <depend>action_msgs</depend>
+  <exec_depend>nav_msgs</exec_depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
