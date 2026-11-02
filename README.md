@@ -6,7 +6,7 @@ This project implements a mobile robot simulation using **ROS 2 Humble**, **Gaze
 
 The lab explores fundamental ROS 2 concepts, including nodes, topics, parameters, custom messages, services, actions, sensor integration, and robot control.
 
-The robot is equipped with a LiDAR sensor, RGB camera, depth camera, and IMU. It can detect nearby obstacles, avoid collisions, execute rotation goals, and autonomously drive around a square.
+The robot is equipped with LiDAR, an RGB camera, a depth camera, and an IMU. It can detect nearby obstacles, avoid collisions, execute rotation goals, and autonomously drive around a square.
 
 ## Technologies Used
 
@@ -38,17 +38,22 @@ lab1_exercise/
 │   └── action/
 │       └── Rotate.action
 │
-└── my_robot_nodes/
-    ├── launch/
-    │   └── square.launch.py
-    ├── my_robot_nodes/
-    │   ├── lidar_subscriber.py
-    │   ├── imu_subscriber.py
-    │   ├── turn_away.py
-    │   ├── rotate_server.py
-    │   └── square_driver.py
-    ├── package.xml
-    └── setup.py
+├── my_robot_nodes/
+│   ├── launch/
+│   │   └── square.launch.py
+│   ├── my_robot_nodes/
+│   │   ├── lidar_subscriber.py
+│   │   ├── imu_subscriber.py
+│   │   ├── turn_away.py
+│   │   ├── rotate_server.py
+│   │   └── square_driver.py
+│   ├── package.xml
+│   └── setup.py
+│
+└── docs/
+    └── screenshots/
+        ├── depth_camera_and_pointcloud.png
+        └── rqt_graph_square_launch.png
 ```
 
 ## Implemented Features
@@ -107,13 +112,12 @@ This message reports the robot's current state and its distance from the detecte
 
 ### 5. ROS 2 Services
 
-Implemented two services:
+Implemented two services.
 
 **Enable or disable obstacle avoidance**
 
 - Service: `/turn_away_enable`
 - Type: `std_srvs/srv/SetBool`
-- Starts disabled.
 - Enables or disables the obstacle avoidance controller.
 - Publishes a zero velocity command when disabled.
 
@@ -163,9 +167,9 @@ The node:
 2. Waits for the result.
 3. Sends a `Rotate` goal to turn left by 90 degrees.
 4. Repeats the sequence four times.
-5. Stops the robot and reports success after completing the square.
+5. Reports success after completing the square.
 
-The side length is configurable through the `side_length` parameter, with a default value of `0.5` meters.
+The side length is configurable through the `side_length` parameter.
 
 ## Installation and Setup
 
@@ -178,6 +182,7 @@ Make sure the following are installed:
 - Gazebo Sim
 - `ros_gz`
 - `colcon`
+- `rosdep`
 
 ### 1. Create a ROS 2 workspace
 
@@ -186,7 +191,11 @@ mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 ```
 
-Clone or copy the lab packages into the `src` directory.
+Clone the repository:
+
+```bash
+git clone https://github.com/Mulu-Girmay/Robotics_lab1.git lab1_exercise
+```
 
 ### 2. Source ROS 2
 
@@ -198,13 +207,14 @@ source /opt/ros/humble/setup.bash
 
 ```bash
 cd ~/ros2_ws
+rosdep update
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
 ### 4. Build the packages
 
 ```bash
-colcon build --packages-up-to my_robot_nodes \
+colcon build --symlink-install --packages-up-to my_robot_nodes \
   --allow-overriding my_robot_interfaces
 ```
 
@@ -214,75 +224,172 @@ colcon build --packages-up-to my_robot_nodes \
 source install/setup.bash
 ```
 
-## Running the Project
+**Note:** Source both ROS 2 and the workspace in every new terminal before running ROS commands.
 
-### Launch the square-driving simulation
+## Running Each Lab Step
 
-Run:
+### Step 1: Sensor Integration
 
-```bash
-ros2 launch my_robot_nodes square.launch.py
-```
-
-To change the square's side length:
+Launch the robot simulation:
 
 ```bash
-ros2 launch my_robot_nodes square.launch.py side_length:=0.8
+ros2 launch diffdrive_bot gazebo.launch.py
 ```
 
-The launch file starts:
-
-- Gazebo simulation
-- Robot state publisher
-- ROS-Gazebo parameter bridge
-- RViz2
-- Obstacle detector
-- Drive controller
-- Drive distance action server
-- Rotation action server
-- Square driver
-
-The robot then drives four sides and performs a 90-degree left turn after each side.
-
-### Useful ROS 2 commands
-
-**List active nodes**
-
-```bash
-ros2 node list
-```
-
-**List topics**
+Inspect the available sensor topics:
 
 ```bash
 ros2 topic list
 ```
 
-**Inspect robot status**
+Check IMU data:
+
+```bash
+ros2 topic echo /imu
+```
+
+Check the depth camera image:
+
+```bash
+ros2 topic hz /depth_camera/image
+```
+
+Open RViz2 to visualize the depth image and point cloud.
+
+### Step 2: Obstacle Avoidance
+
+With the robot simulation running, open another terminal and start the obstacle avoidance node:
+
+```bash
+ros2 run my_robot_nodes turn_away
+```
+
+Inspect obstacle information and velocity commands:
+
+```bash
+ros2 topic echo /obstacle
+ros2 topic echo /cmd_vel
+```
+
+### Step 3: ROS 2 Parameters
+
+Inspect the node's parameters:
+
+```bash
+ros2 param list /turn_away
+```
+
+Change the forward speed:
+
+```bash
+ros2 param set /turn_away forward_speed 0.3
+```
+
+Change the turning speed:
+
+```bash
+ros2 param set /turn_away turn_speed 0.8
+```
+
+### Step 4: Custom Message
+
+Inspect the robot status:
 
 ```bash
 ros2 topic echo /robot_status
 ```
 
-**Inspect odometry**
+Inspect the custom message definition:
+
+```bash
+ros2 interface show my_robot_interfaces/msg/RobotStatus
+```
+
+### Step 5: ROS 2 Services
+
+Enable obstacle avoidance:
+
+```bash
+ros2 service call /turn_away_enable std_srvs/srv/SetBool "{data: true}"
+```
+
+Disable obstacle avoidance:
+
+```bash
+ros2 service call /turn_away_enable std_srvs/srv/SetBool "{data: false}"
+```
+
+Update the turning speed:
+
+```bash
+ros2 service call /set_turn_speed my_robot_interfaces/srv/SetTurnSpeed "{turn_speed: 0.8}"
+```
+
+### Step 6: Rotation Action Server
+
+Send a rotation goal of approximately 90 degrees:
+
+```bash
+ros2 action send_goal /rotate my_robot_interfaces/action/Rotate "{angle: 1.57}" --feedback
+```
+
+### Step 7: Square Driving Action Client
+
+Launch the complete square-driving simulation:
+
+```bash
+ros2 launch my_robot_nodes square.launch.py
+```
+
+To specify a side length of 0.8 meters:
+
+```bash
+ros2 launch my_robot_nodes square.launch.py side_length:=0.8
+```
+
+The launch file starts the simulation and required controllers, action servers, and the square-driving action client.
+
+The robot drives four sides and performs a 90-degree rotation after each side.
+
+## Useful ROS 2 Commands
+
+List active nodes:
+
+```bash
+ros2 node list
+```
+
+List topics:
+
+```bash
+ros2 topic list
+```
+
+Inspect robot status:
+
+```bash
+ros2 topic echo /robot_status
+```
+
+Inspect odometry:
 
 ```bash
 ros2 topic echo /odom
 ```
 
-**List available services**
+List available services:
 
 ```bash
 ros2 service list
 ```
 
-**List available actions**
+List available actions:
 
 ```bash
 ros2 action list
 ```
 
-**Inspect custom interfaces**
+Inspect custom interfaces:
 
 ```bash
 ros2 interface show my_robot_interfaces/msg/RobotStatus
@@ -295,6 +402,7 @@ ros2 interface show my_robot_interfaces/action/Rotate
 The following functionality was tested during development:
 
 - Sensor topics and ROS-Gazebo bridges.
+- Depth image and point cloud visualization in RViz2.
 - Obstacle avoidance behavior.
 - Runtime parameter updates.
 - Custom message publishing.
@@ -304,19 +412,29 @@ The following functionality was tested during development:
 - Rejection of zero-angle rotation goals.
 - Square-driving sequence using both action servers.
 
-The square-driving test was successfully executed with a side length of `0.8` meters.
+The square-driving test was successfully executed with a side length of `0.8` meters. The robot completed all four sides successfully.
 
 ## Screenshots
 
-Add screenshots of your simulation and test results here.
+### Step 1: Depth Camera and Point Cloud in RViz2
 
-Suggested screenshots:
+![Depth camera image and point cloud](docs/screenshots/depth_camera_and_pointcloud.png)
 
-1. Gazebo simulation with the robot.
-2. RViz2 showing the robot and sensor data.
-3. Depth camera or point cloud visualization.
-4. Successful rotation action feedback.
-5. Robot completing the square-driving sequence.
+### Step 7: ROS 2 Node Graph During Square Driving
+
+![rqt_graph during square launch](docs/screenshots/rqt_graph_square_launch.png)
+
+## Issues Encountered and Solutions
+
+### Gazebo Robot Spawning
+
+Initially, the robot spawning process depended on a fixed delay before requesting the Gazebo create service. This could cause the spawn request to run before Gazebo was ready, depending on simulation startup time.
+
+**Solution:** Replaced the fixed delay with a readiness check that waits until Gazebo exposes its robot creation service before spawning the robot. This makes the startup process more reliable.
+
+### Development Environment
+
+The simulation was developed and tested using ROS 2 Humble and Gazebo Sim in Ubuntu 22.04 under WSL. GUI applications such as Gazebo and RViz2 required additional display and runtime environment configuration.
 
 ## Learning Outcomes
 
@@ -330,14 +448,9 @@ Through this project, I practiced:
 - Integrating sensors with Gazebo.
 - Using odometry for robot rotation tracking.
 - Launching and coordinating multiple ROS 2 nodes.
+- Debugging ROS 2 and Gazebo integration issues.
 
 ## Author
 
 **Mulu Girmay Gebru**
 
-Software Engineering Student  
-Addis Ababa University
-
----
-
-*This project was developed as part of ROS 2 Lab 1.*
