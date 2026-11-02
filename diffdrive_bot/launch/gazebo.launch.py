@@ -2,9 +2,10 @@
 Run the lab robot in Gazebo: start the world, spawn the robot from its URDF, bridge its
 topics to ROS 2, and show the model, TF tree, lidar scan and camera image in RViz.
 
-The Gazebo server starts first and the robot is spawned once the server is up. The Gazebo
-window opens after the robot is spawned: a window still loading its world misses the models
-created meanwhile, while one that starts later receives the whole scene.
+The Gazebo server starts first. The spawn step waits until the server offers its create
+service, then spawns the robot. The Gazebo window opens after the robot is spawned: a
+window still loading its world misses the models created meanwhile, while one that starts
+later receives the whole scene.
 
 Usage:
     ros2 launch diffdrive_bot gazebo.launch.py
@@ -15,14 +16,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, RegisterEventHandler, Shutdown, TimerAction
+from launch.actions import ExecuteProcess, RegisterEventHandler, Shutdown
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-
-# Time the Gazebo server needs to load the world before it answers a spawn request
-SPAWN_DELAY_S = 12.0
 
 
 def generate_launch_description():
@@ -36,7 +34,7 @@ def generate_launch_description():
     # gz itself, not through a shell, so that stopping the launch reaches the server
     gazebo_server = ExecuteProcess(
         cmd=[
-           "gz", "sim", "-v", "4", "-s", "-r",
+            "gz", "sim", "-v", "4", "-s", "-r",
             os.path.join(pkg_share, "worlds", "obstacles.sdf")],
         name="gazebo_server",
         output="screen",
@@ -58,10 +56,17 @@ def generate_launch_description():
         output="screen",
     )
 
-    spawn = Node(
-        package="ros_gz_sim",
-        executable="create",
-        arguments=["-world", "obstacles", "-topic", "robot_description", "-name", "diffdrive_bot", "-z", "0.05"],
+    # Wait until the server offers its create service, then spawn the robot
+    spawn = ExecuteProcess(
+        cmd=[
+            "bash", "-c",
+            'until gz service -l 2>/dev/null | grep -q "^/world/obstacles/create"; '
+            "do sleep 1; done; "
+            "sleep 3; "
+            "ros2 run ros_gz_sim create -world obstacles -topic robot_description "
+            "-name diffdrive_bot -z 0.05",
+        ],
+        name="spawn",
         output="screen",
     )
 
@@ -83,7 +88,7 @@ def generate_launch_description():
     return LaunchDescription([
         gazebo_server,
         robot_state_publisher,
-        TimerAction(period=SPAWN_DELAY_S, actions=[spawn]),
+        spawn,
         RegisterEventHandler(OnProcessExit(target_action=spawn, on_exit=[gazebo_gui])),
         bridge,
         rviz,
