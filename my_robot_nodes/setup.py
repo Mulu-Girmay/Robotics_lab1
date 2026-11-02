@@ -22,8 +22,11 @@ setup(
             'pytest',
         ],
     },
+    
     entry_points={
-        'console_scripts': [
-        ],
-    },
+    'console_scripts': [
+        'imu_subscriber = my_robot_nodes.imu_subscriber:main',
+        'lidar_subscriber = my_robot_nodes.lidar_subscriber:main',
+    ],
+},
 )

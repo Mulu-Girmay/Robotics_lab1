@@ -22,7 +22,7 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 # Time the Gazebo server needs to load the world before it answers a spawn request
-SPAWN_DELAY_S = 2.0
+SPAWN_DELAY_S = 12.0
 
 
 def generate_launch_description():
@@ -35,7 +35,9 @@ def generate_launch_description():
 
     # gz itself, not through a shell, so that stopping the launch reaches the server
     gazebo_server = ExecuteProcess(
-        cmd=["gz", "sim", "-s", "-r", os.path.join(pkg_share, "worlds", "obstacles.sdf")],
+        cmd=[
+           "gz", "sim", "-v", "4", "-s", "-r",
+            os.path.join(pkg_share, "worlds", "obstacles.sdf")],
         name="gazebo_server",
         output="screen",
         on_exit=Shutdown(),
