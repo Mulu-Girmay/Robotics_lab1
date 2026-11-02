@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'my_robot_nodes'
 
@@ -7,10 +9,12 @@ setup(
     version='0.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
-    ],
+    ('share/ament_index/resource_index/packages',
+        ['resource/' + package_name]),
+    ('share/' + package_name, ['package.xml']),
+    (os.path.join('share', package_name, 'launch'),
+        glob('launch/*.launch.py')),
+],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='mulu',
@@ -28,7 +32,8 @@ setup(
         'imu_subscriber = my_robot_nodes.imu_subscriber:main',
         'lidar_subscriber = my_robot_nodes.lidar_subscriber:main',
         'turn_away = my_robot_nodes.turn_away:main',
-        'rotate_server = my_robot_nodes.rotate_server:main'
+        'rotate_server = my_robot_nodes.rotate_server:main',
+        'square_driver = my_robot_nodes.square_driver:main'
     ],
 },
 )
